@@ -3,7 +3,7 @@
 Retrospective entry for 2026-10-17, recorded on 2026-10-18.
 This note was created after the missed day to restore the contribution calendar;
 its Git author date is intentionally set to October 17. It is not evidence that
-this document was written on October 17. The committer date records its creation.
+this document was written on October 17. GitHub initially assigned both Git timestamps to the historical date; publication occurred on October 18 in Asia/Kolkata.
 
 ## What I learned
 
