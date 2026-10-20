@@ -1,30 +1,34 @@
+import logging
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 
-from logger import logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Initialize the FastAPI app
+# Initialize the FastAPI app.
 app = FastAPI()
 
-# Define a model for input data
+
 class SumRequest(BaseModel):
+    """Two numbers to add."""
+
     num1: float
     num2: float
 
+
 @app.get("/")
 def read_root():
-    logger.info("Checkup api done")
+    logger.info("Health check endpoint called")
     return {"message": "Welcome to the FastAPI app!"}
+
 
 @app.post("/sum")
 def calculate_sum(request: SumRequest):
     result = request.num1 + request.num2
-    logger.info(f"The sum of {nun1} and {num2} is {result}")
+    logger.info("The sum of %s and %s is %s", request.num1, request.num2, result)
     return {"num1": request.num1, "num2": request.num2, "sum": result}
 
 
-print("Hello World..!")
-
-# To run this API, save it as a Python file (e.g., `main.py`), then run:
-# uvicorn main:app --reload
+# Run with: uvicorn sample:app --reload
