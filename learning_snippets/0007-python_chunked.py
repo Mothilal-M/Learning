@@ -8,6 +8,8 @@ Run:
 
 def chunked(items, size):
     """Yield lists of at most size items; size must be a positive integer."""
+    if isinstance(size, bool) or not isinstance(size, int):
+        raise TypeError("size must be an integer")
     if size <= 0:
         raise ValueError("size must be greater than zero")
 
@@ -33,12 +35,23 @@ def main():
     assert list(chunked([1, 2], 2)) == [[1, 2]]
     assert list(chunked((number for number in range(3)), 5)) == [[0, 1, 2]]
 
-    try:
-        list(chunked([1], 0))
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("chunk size zero should raise ValueError")
+    for invalid_size in (0, -1):
+        try:
+            list(chunked([1], invalid_size))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"chunk size {invalid_size} should raise ValueError")
+
+    for invalid_size in (2.5, True, "2", None):
+        try:
+            list(chunked([1], invalid_size))
+        except TypeError:
+            pass
+        else:
+            raise AssertionError(
+                f"chunk size {invalid_size!r} should raise TypeError"
+            )
 
     print(list(chunked(records, 2)))
     print("All examples passed.")
