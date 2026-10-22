@@ -3,6 +3,7 @@
 Run the examples and tests with:
     python learning_snippets/0008-python_retry_backoff.py
 """
+import math
 from collections.abc import Callable
 from time import sleep
 from typing import TypeVar
@@ -19,8 +20,21 @@ def retry(
     wait: Callable[[float], None] = sleep,
 ) -> T:
     """Retry selected transient errors, doubling the delay after each failure."""
+    if isinstance(attempts, bool) or not isinstance(attempts, int):
+        raise TypeError("attempts must be an integer")
     if attempts < 1:
         raise ValueError("attempts must be at least 1")
+
+    if isinstance(initial_delay, bool) or not isinstance(
+        initial_delay, (int, float)
+    ):
+        raise TypeError("initial_delay must be a number")
+    try:
+        delay_is_finite = math.isfinite(initial_delay)
+    except OverflowError:
+        delay_is_finite = False
+    if not delay_is_finite:
+        raise ValueError("initial_delay must be finite")
     if initial_delay < 0:
         raise ValueError("initial_delay cannot be negative")
 
@@ -71,6 +85,23 @@ def _self_test() -> None:
         pass
     else:
         raise AssertionError("unexpected errors must not be retried")
+
+    def expect_error(error_type: type[Exception], **kwargs: object) -> None:
+        try:
+            retry(lambda: "unused", **kwargs)  # type: ignore[arg-type]
+        except error_type:
+            return
+        raise AssertionError(f"expected {error_type.__name__} for {kwargs!r}")
+
+    for invalid_attempts in (1.5, True, "3", None):
+        expect_error(TypeError, attempts=invalid_attempts)
+    for invalid_attempts in (0, -1):
+        expect_error(ValueError, attempts=invalid_attempts)
+
+    for invalid_delay in ("0.1", True, None):
+        expect_error(TypeError, initial_delay=invalid_delay)
+    for invalid_delay in (-0.1, math.nan, math.inf, -math.inf, 10**1000):
+        expect_error(ValueError, initial_delay=invalid_delay)
 
     print("All retry/backoff checks passed.")
 
