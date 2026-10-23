@@ -18,6 +18,8 @@ async def gather_limited(
     limit: int,
 ) -> list[str]:
     """Run one async operation per item, with at most `limit` active at once."""
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        raise TypeError("limit must be an integer")
     if limit < 1:
         raise ValueError("limit must be at least 1")
 
@@ -51,12 +53,25 @@ async def _self_test() -> None:
 
     assert await gather_limited([], fetch_label, limit=2) == []
 
-    try:
-        await gather_limited([1], fetch_label, limit=0)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("limit zero should raise ValueError")
+    for invalid_limit in (1.5, True, "2", None):
+        try:
+            await gather_limited([1], fetch_label, limit=invalid_limit)  # type: ignore[arg-type]
+        except TypeError:
+            pass
+        else:
+            raise AssertionError(
+                f"limit {invalid_limit!r} should raise TypeError"
+            )
+
+    for invalid_limit in (0, -1):
+        try:
+            await gather_limited([1], fetch_label, limit=invalid_limit)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(
+                f"limit {invalid_limit} should raise ValueError"
+            )
 
     print("All asyncio semaphore checks passed.")
 
