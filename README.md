@@ -18,6 +18,7 @@ Run these commands from the repository root with Python 3:
 The examples with built-in checks can be run directly:
 
 ```bash
+python3 learning_snippets/0002-python_csv_sums.py --self-test
 python3 learning_snippets/0005-python_unique_preserve_order.py
 python3 learning_snippets/0006-python_count_items.py
 python3 learning_snippets/0007-python_chunked.py
