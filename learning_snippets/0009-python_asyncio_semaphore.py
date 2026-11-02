@@ -9,15 +9,16 @@ from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
 T = TypeVar("T")
+R = TypeVar("R")
 
 
 async def gather_limited(
     items: list[T],
-    operation: Callable[[T], Awaitable[str]],
+    operation: Callable[[T], Awaitable[R]],
     *,
     limit: int,
-) -> list[str]:
-    """Run one async operation per item, with at most `limit` active at once."""
+) -> list[R]:
+    """Run async operations with a concurrency limit; preserve input order."""
     if isinstance(limit, bool) or not isinstance(limit, int):
         raise TypeError("limit must be an integer")
     if limit < 1:
@@ -25,7 +26,7 @@ async def gather_limited(
 
     semaphore = asyncio.Semaphore(limit)
 
-    async def run_one(item: T) -> str:
+    async def run_one(item: T) -> R:
         async with semaphore:
             return await operation(item)
 
@@ -51,6 +52,11 @@ async def _self_test() -> None:
     assert peak_active == 2
     assert active == 0
 
+    async def square(item: int) -> int:
+        await asyncio.sleep(0)
+        return item * item
+
+    assert await gather_limited([1, 2, 3], square, limit=2) == [1, 4, 9]
     assert await gather_limited([], fetch_label, limit=2) == []
 
     for invalid_limit in (1.5, True, "2", None):
