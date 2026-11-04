@@ -4,7 +4,7 @@ A small collection of practical programming examples and learning notes. Each sn
 
 ## Python examples
 
-Run these commands from the repository root with Python 3:
+Run these commands from the repository root with **Python 3.9 or newer**. The examples use built-in generic type annotations such as `list[str]` and `type[Exception]`, which require Python 3.9+.
 
 | File | What it demonstrates |
 | --- | --- |
@@ -12,7 +12,7 @@ Run these commands from the repository root with Python 3:
 | `learning_snippets/0005-python_unique_preserve_order.py` | Remove duplicates while keeping first-occurrence order. |
 | `learning_snippets/0006-python_count_items.py` | Count occurrences of hashable values. |
 | `learning_snippets/0007-python_chunked.py` | Split an iterable into bounded-size lists. |
-| `learning_snippets/0008-python_retry_backoff.py` | Retry transient failures with exponential backoff. |
+| `learning_snippets/0008-python_retry_backoff.py` | Retry transient failures with capped exponential backoff. |
 | `learning_snippets/0009-python_asyncio_semaphore.py` | Limit concurrent asynchronous operations. |
 
 The examples with built-in checks can be run directly:
