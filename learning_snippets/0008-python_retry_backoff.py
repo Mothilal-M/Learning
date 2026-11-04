@@ -1,4 +1,4 @@
-"""Retry a transient operation with bounded exponential backoff.
+"""Retry a transient operation with capped exponential backoff.
 
 Run the examples and tests with:
     python learning_snippets/0008-python_retry_backoff.py
@@ -11,32 +11,37 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
+def _validate_delay(name: str, value: float) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{name} must be a number")
+    try:
+        delay = float(value)
+    except OverflowError:
+        raise ValueError(f"{name} must be finite") from None
+    if not math.isfinite(delay):
+        raise ValueError(f"{name} must be finite")
+    if delay < 0:
+        raise ValueError(f"{name} cannot be negative")
+    return delay
+
+
 def retry(
     operation: Callable[[], T],
     *,
     attempts: int = 3,
     initial_delay: float = 0.1,
+    max_delay: float = 30.0,
     retry_on: tuple[type[Exception], ...] = (TimeoutError, ConnectionError),
     wait: Callable[[float], None] = sleep,
 ) -> T:
-    """Retry selected transient errors, doubling the delay after each failure."""
+    """Retry selected transient errors with a capped exponential delay."""
     if isinstance(attempts, bool) or not isinstance(attempts, int):
         raise TypeError("attempts must be an integer")
     if attempts < 1:
         raise ValueError("attempts must be at least 1")
 
-    if isinstance(initial_delay, bool) or not isinstance(
-        initial_delay, (int, float)
-    ):
-        raise TypeError("initial_delay must be a number")
-    try:
-        delay_is_finite = math.isfinite(initial_delay)
-    except OverflowError:
-        delay_is_finite = False
-    if not delay_is_finite:
-        raise ValueError("initial_delay must be finite")
-    if initial_delay < 0:
-        raise ValueError("initial_delay cannot be negative")
+    max_delay_value = _validate_delay("max_delay", max_delay)
+    delay = min(_validate_delay("initial_delay", initial_delay), max_delay_value)
 
     for attempt in range(attempts):
         try:
@@ -44,7 +49,8 @@ def retry(
         except retry_on:
             if attempt == attempts - 1:
                 raise
-            wait(initial_delay * (2**attempt))
+            wait(delay)
+            delay = min(delay * 2, max_delay_value)
 
     raise AssertionError("unreachable")
 
@@ -102,6 +108,30 @@ def _self_test() -> None:
         expect_error(TypeError, initial_delay=invalid_delay)
     for invalid_delay in (-0.1, math.nan, math.inf, -math.inf, 10**1000):
         expect_error(ValueError, initial_delay=invalid_delay)
+
+    delays.clear()
+    calls = 0
+
+    def eventually_succeeds() -> str:
+        nonlocal calls
+        calls += 1
+        if calls < 4:
+            raise TimeoutError("temporary timeout")
+        return "done"
+
+    assert retry(
+        eventually_succeeds,
+        attempts=4,
+        initial_delay=0.5,
+        max_delay=0.75,
+        wait=delays.append,
+    ) == "done"
+    assert delays == [0.5, 0.75, 0.75]
+
+    for invalid_delay in ("1", True, None):
+        expect_error(TypeError, max_delay=invalid_delay)
+    for invalid_delay in (-1, math.nan, math.inf, 10**1000):
+        expect_error(ValueError, max_delay=invalid_delay)
 
     print("All retry/backoff checks passed.")
 
