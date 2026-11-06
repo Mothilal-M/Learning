@@ -36,8 +36,8 @@ cat data.csv | python3 learning_snippets/0002-python_csv_sums.py
 ## Other examples
 
 - `learning_snippets/0001-mini_bash.sh` — print Fibonacci numbers (for example, `bash learning_snippets/0001-mini_bash.sh 10`).
-- `learning_snippets/0003-js_debounce.js` — a debounce utility written as an ES module.
-- `learning_snippets/0004-go_rate_limiter.go` — a small token-bucket-style rate-limiter demonstration (`go run learning_snippets/0004-go_rate_limiter.go`).
+- `learning_snippets/0003-js_debounce.js` — a debounce utility written as an ES module, with `cancel()` and `flush()` methods. Run its tests with `node --test learning_snippets/0003-js_debounce.test.mjs` (Node.js 22+).
+- `learning_snippets/0004-go_rate_limiter.go` — a token-bucket rate-limiter demonstration with an initial burst of three requests (`go run learning_snippets/0004-go_rate_limiter.go`). Run its tests with `go test learning_snippets/0004-go_rate_limiter.go learning_snippets/0004-go_rate_limiter_test.go`.
 - `sample.py` — a minimal FastAPI sum endpoint. Install FastAPI and Uvicorn, then run `uvicorn sample:app --reload`.
 - `king_of_codes.md` — creative coding notes and an example of keeping API keys in environment variables rather than source files.
 

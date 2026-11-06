@@ -1,37 +1,60 @@
 package main
 
 import (
-    "context"
-    "fmt"
-    "time"
+	"context"
+	"fmt"
+	"sync"
+	"time"
 )
 
-// Tiny token-bucket style limiter demo: allow 3 events per second
+// refillTokens adds one token per interval without exceeding the bucket capacity.
+// It exits when ctx is cancelled.
+func refillTokens(ctx context.Context, interval time.Duration, tokens chan<- struct{}) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			select {
+			case tokens <- struct{}{}:
+			default: // The bucket is already full; discard this tick.
+			}
+		}
+	}
+}
+
+// newTokenBucket creates a bucket that starts full, allowing an initial burst.
+func newTokenBucket(capacity int) chan struct{} {
+	tokens := make(chan struct{}, capacity)
+	for i := 0; i < capacity; i++ {
+		tokens <- struct{}{}
+	}
+	return tokens
+}
+
+// Tiny token-bucket demo: allow a burst of 3 requests, then refill at ~3/sec.
 func main() {
-    ctx := context.Background()
-    ticker := time.NewTicker(333 * time.Millisecond) // ~3 tokens/sec
-    defer ticker.Stop()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-    tokens := make(chan struct{}, 3)
+	tokens := newTokenBucket(3)
 
-    // refill goroutine
-    go func() {
-        for {
-            select {
-            case <-ctx.Done():
-                return
-            case <-ticker.C:
-                select {
-                case tokens <- struct{}{}:
-                default:
-                }
-            }
-        }
-    }()
+	var refill sync.WaitGroup
+	refill.Add(1)
+	go func() {
+		defer refill.Done()
+		refillTokens(ctx, 333*time.Millisecond, tokens)
+	}()
 
-    // simulate 10 requests and show when they're allowed
-    for i := 1; i <= 10; i++ {
-        <-tokens // block until a token available
-        fmt.Printf("allowed request %d at %s\n", i, time.Now().Format(time.RFC3339Nano))
-    }
+	// Simulate 10 requests and show when they're allowed.
+	for i := 1; i <= 10; i++ {
+		<-tokens // Block until a token is available.
+		fmt.Printf("allowed request %d at %s\n", i, time.Now().Format(time.RFC3339Nano))
+	}
+
+	cancel()
+	refill.Wait() // Ensure the refill goroutine has exited before main returns.
 }

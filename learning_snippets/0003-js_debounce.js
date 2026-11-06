@@ -1,17 +1,55 @@
 // Mini: debounce utility (ES module)
-// Usage (browser/node with ESM):
+// Usage (browser/Node with ESM):
 // const debounced = debounce(fn, 200);
 // debounced();
+// debounced.cancel(); // discard a pending call
+// debounced.flush();  // run a pending call immediately
 
 export function debounce(fn, wait = 200) {
-  let t = null;
-  return function (...args) {
-    if (t) clearTimeout(t);
-    t = setTimeout(() => fn.apply(this, args), wait);
-  };
-}
+  if (typeof fn !== "function") {
+    throw new TypeError("fn must be a function");
+  }
+  if (typeof wait !== "number") {
+    throw new TypeError("wait must be a number");
+  }
+  if (!Number.isFinite(wait) || wait < 0) {
+    throw new RangeError("wait must be a finite, non-negative number");
+  }
 
-// quick example (uncomment to test in browser):
-// const log = (x) => console.log('called', x);
-// const d = debounce(log, 100);
-// d(1); d(2); d(3);
+  let timer = null;
+  let lastArgs;
+  let lastThis;
+  let result;
+
+  function invoke() {
+    timer = null;
+    const args = lastArgs;
+    const thisArg = lastThis;
+    lastArgs = undefined;
+    lastThis = undefined;
+    result = fn.apply(thisArg, args);
+    return result;
+  }
+
+  function debounced(...args) {
+    if (timer !== null) clearTimeout(timer);
+    lastArgs = args;
+    lastThis = this;
+    timer = setTimeout(invoke, wait);
+  }
+
+  debounced.cancel = function () {
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
+    lastArgs = undefined;
+    lastThis = undefined;
+  };
+
+  debounced.flush = function () {
+    if (timer === null) return result;
+    clearTimeout(timer);
+    return invoke();
+  };
+
+  return debounced;
+}
