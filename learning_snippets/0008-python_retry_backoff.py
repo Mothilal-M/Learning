@@ -35,6 +35,16 @@ def retry(
     wait: Callable[[float], None] = sleep,
 ) -> T:
     """Retry selected transient errors with a capped exponential delay."""
+    if not callable(operation):
+        raise TypeError("operation must be callable")
+    if not callable(wait):
+        raise TypeError("wait must be callable")
+    if not isinstance(retry_on, tuple) or any(
+        not isinstance(error_type, type)
+        or not issubclass(error_type, Exception)
+        for error_type in retry_on
+    ):
+        raise TypeError("retry_on must be a tuple of Exception subclasses")
     if isinstance(attempts, bool) or not isinstance(attempts, int):
         raise TypeError("attempts must be an integer")
     if attempts < 1:
@@ -98,6 +108,22 @@ def _self_test() -> None:
         except error_type:
             return
         raise AssertionError(f"expected {error_type.__name__} for {kwargs!r}")
+
+    try:
+        retry(None)  # type: ignore[arg-type]
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("a non-callable operation should be rejected")
+
+    expect_error(TypeError, wait=None)
+    for invalid_retry_on in (
+        [TimeoutError],
+        TimeoutError,
+        (TimeoutError, "not-an-exception"),
+        (KeyboardInterrupt,),
+    ):
+        expect_error(TypeError, retry_on=invalid_retry_on)
 
     for invalid_attempts in (1.5, True, "3", None):
         expect_error(TypeError, attempts=invalid_attempts)
